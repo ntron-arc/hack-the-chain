@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hack the Chain — A Seismic Game</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --mauve: #B25A80;
+    --purple: #522842;
+    --black: #1B1B1B;
+    --white: #F9F9F9;
+    --grey: #737373;
+    --green: #4CAF50;
+    --red: #E53935;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0d0d0d;
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* SCANLINE OVERLAY */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0,0,0,0.03) 0px,
+      rgba(0,0,0,0.03) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+
+  /* ══════════════════════════════
+     INTRO SCREEN
+  ══════════════════════════════ */
+  #screen-intro {
+    background: radial-gradient(ellipse at center, #1a0a12 0%, #0d0d0d 70%);
+    text-align: center;
+  }
+
+  .logo-wrap { margin-bottom: 32px; }
+
+  /* Crystal gem SVG logo */
+  .gem { filter: drop-shadow(0 0 20px rgba(178,90,128,0.6)); }
+
+  .intro-title {
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .intro-title .hack { color: var(--white); }
+  .intro-title .the  { color: var(--grey); font-weight: 400; font-size: 0.6em; display: block; letter-spacing: 0px; margin: 4px 0; }
+  .intro-title .chain { color: var(--mauve); }
+
+  .intro-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--grey);
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+
+  .intro-desc {
+    max-width: 480px;
+    font-size: 15px;
+    color: #aaa;
+    line-height: 1.7;
+    margin-bottom: 48px;
+  }
+
+  .intro-desc strong { color: var(--mauve); }
+
+  .btn-primary {
+    background: var(--mauve);
+    color: white;
+    border: none;
+    padding: 16px 48px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn-primary:hover {
+    background: #c96a93;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(178,90,128,0.4);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--grey);
+    border: 1px solid #333;
+    padding: 12px 32px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    margin-top: 16px;
+  }
+
+  .btn-secondary:hover { border-color: var(--mauve); color: var(--mauve); }
+
+  .powered {
+    position: fixed;
+    bottom: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: #333;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .powered span { color: var(--mauve); }
+
+  /* ══════════════════════════════
+     TUTORIAL SCREEN
+  ══════════════════════════════ */
+  #screen-tutorial {
+    background: #0d0d0d;
+    text-align: center;
+  }
+
+  .tutorial-box {
+    max-width: 560px;
+    width: 100%;
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-top: 3px solid var(--mauve);
+    padding: 40px;
+    border-radius: 2px;
+  }
+
+  .tutorial-box h2 {
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 24px;
+    color: var(--white);
+  }
+
+  .tut-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    text-align: left;
+  }
+
+  .tut-num {
+    width: 32px;
+    height: 32px;
+    background: var(--purple);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--mauve);
+    flex-shrink: 0;
+  }
+
+  .tut-text { font-size: 14px; color: #bbb; line-height: 1.6; padding-top: 6px; }
+  .tut-text strong { color: var(--white); }
+  .tut-text .good { color: var(--green); }
+  .tut-text .bad  { color: var(--red); }
+
+  /* ══════════════════════════════
+     GAME SCREEN
+  ══════════════════════════════ */
+  #screen-game {
+    background: #0a0a0a;
+    justify-content: flex-start;
+    padding: 0;
+  }
+
+  /* Top HUD */
+  .hud {
+    width: 100%;
+    background: #111;
+    border-bottom: 1px solid #222;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .hud-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--white);
+  }
+
+  .hud-center {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .hud-stat {
+    text-align: center;
+  }
+
+  .hud-stat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--mauve);
+    line-height: 1;
+  }
+
+  .hud-stat-label {
+    font-size: 9px;
+    color: var(--grey);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .hud-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .life {
+    font-size: 18px;
+    transition: all 0.3s;
+  }
+
+  .life.lost { opacity: 0.2; filter: grayscale(1); }
+
+  /* Round banner */
+  .round-banner {
+    width: 100%;
+    background: var(--purple);
+    padding: 8px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .round-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--mauve);
+    text-transform: uppercase;
+  }
+
+  .chain-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-weight: 600;
+  }
+
+  .chain-type.public  { background: #E5393520; color: #ff6b6b; border: 1px solid #E5393540; }
+  .chain-type.seismic { background: rgba(178,90,128,0.15); color: var(--mauve); border: 1px solid rgba(178,90,128,0.3); }
+
+  /* Game area */
+  .game-area {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    overflow-y: auto;
+  }
+
+  .scenario-card {
+    max-width: 640px;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .scenario-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--grey);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .scenario-desc {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.4;
+    margin-bottom: 6px;
+  }
+
+  .scenario-sub {
+    font-size: 13px;
+    color: #888;
+    line-height: 1.6;
+  }
+
+  /* Transaction block */
+  .tx-block {
+    max-width: 640px;
+    width: 100%;
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 2px;
+    padding: 20px;
+    margin-bottom: 24px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .tx-header {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--grey);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .tx-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #1e1e1e;
+    gap: 12px;
+  }
+
+  .tx-row:last-child { border-bottom: none; }
+
+  .tx-key { font-size: 11px; color: var(--grey); flex-shrink: 0; }
+
+  .tx-val {
+    font-size: 12px;
+    color: var(--white);
+    word-break: break-all;
+    text-align: right;
+  }
+
+  .tx-val.encrypted {
+    color: #333;
+    background: #1a1a1a;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  .tx-val.visible { color: #ff9a9a; }
+  .tx-val.amount-visible { color: #ffcc66; font-weight: 600; }
+
+  /* Action question */
+  .action-box {
+    max-width: 640px;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+
+  .action-question {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--white);
+    margin-bottom: 6px;
+  }
+
+  .action-sub {
+    font-size: 13px;
+    color: var(--grey);
+    margin-bottom: 24px;
+  }
+
+  .choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .choice-btn {
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    color: var(--white);
+    padding: 16px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    line-height: 1.4;
+  }
+
+  .choice-btn:hover { border-color: var(--mauve); color: var(--mauve); background: rgba(178,90,128,0.05); }
+  .choice-btn.correct { border-color: var(--green); background: rgba(76,175,80,0.1); color: var(--green); pointer-events: none; }
+  .choice-btn.wrong   { border-color: var(--red);   background: rgba(229,57,53,0.1);  color: var(--red);   pointer-events: none; }
+  .choice-btn.reveal  { border-color: #444; color: #555; pointer-events: none; }
+
+  /* Feedback */
+  .feedback {
+    max-width: 640px;
+    width: 100%;
+    padding: 16px 20px;
+    border-radius: 2px;
+    margin-bottom: 16px;
+    display: none;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .feedback.show { display: flex; }
+  .feedback.correct-fb { background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.3); }
+  .feedback.wrong-fb   { background: rgba(229,57,53,0.08);  border: 1px solid rgba(229,57,53,0.3); }
+
+  .fb-icon { font-size: 20px; flex-shrink: 0; }
+  .fb-text { font-size: 13px; color: #ccc; line-height: 1.6; }
+  .fb-text strong { color: var(--white); }
+
+  .next-btn {
+    background: var(--mauve);
+    color: white;
+    border: none;
+    padding: 13px 36px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    display: none;
+  }
+
+  .next-btn.show { display: block; }
+  .next-btn:hover { background: #c96a93; }
+
+  /* Timer bar */
+  .timer-wrap {
+    max-width: 640px;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+
+  .timer-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: var(--grey);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .timer-bar {
+    height: 3px;
+    background: #222;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .timer-fill {
+    height: 100%;
+    background: var(--mauve);
+    border-radius: 2px;
+    transition: width 1s linear, background 0.5s;
+  }
+
+  .timer-fill.urgent { background: var(--red); }
+
+  /* ══════════════════════════════
+     RESULT SCREEN
+  ══════════════════════════════ */
+  #screen-result {
+    background: radial-gradient(ellipse at center, #1a0a12 0%, #0d0d0d 70%);
+    text-align: center;
+  }
+
+  .result-box {
+    max-width: 520px;
+    width: 100%;
+    background: #111;
+    border: 1px solid #222;
+    border-top: 3px solid var(--mauve);
+    padding: 48px 40px;
+    border-radius: 2px;
+  }
+
+  .result-emoji { font-size: 56px; margin-bottom: 16px; display: block; }
+
+  .result-title {
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+
+  .result-sub { font-size: 14px; color: var(--grey); margin-bottom: 32px; line-height: 1.6; }
+
+  .result-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .result-stat {
+    background: #1a1a1a;
+    padding: 16px 12px;
+    border-radius: 2px;
+  }
+
+  .result-stat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--mauve);
+    display: block;
+  }
+
+  .result-stat-label { font-size: 11px; color: var(--grey); margin-top: 4px; }
+
+  .seismic-msg {
+    background: var(--purple);
+    padding: 16px 20px;
+    border-radius: 2px;
+    margin-bottom: 28px;
+    text-align: left;
+  }
+
+  .seismic-msg-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--mauve);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .seismic-msg-text { font-size: 13px; color: #ddd; line-height: 1.6; }
+  .seismic-msg-text strong { color: var(--mauve); }
+
+  .btn-row { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+
+  /* ══════════════════════════════
+     MATRIX RAIN (canvas BG)
+  ══════════════════════════════ */
+  #matrix-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    opacity: 0.04;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .screen { position: relative; z-index: 1; }
+
+  /* FLASH EFFECT */
+  .flash {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+
+  .flash.green-flash { background: rgba(76,175,80,0.15); }
+  .flash.red-flash   { background: rgba(229,57,53,0.2); }
+  .flash.show        { opacity: 1; }
+
+  /* PROGRESS DOTS */
+  .progress-dots {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #222;
+    transition: all 0.3s;
+  }
+
+  .dot.done    { background: var(--green); }
+  .dot.wrong-d { background: var(--red); }
+  .dot.current { background: var(--mauve); box-shadow: 0 0 6px var(--mauve); }
+
+  /* GLITCH TEXT */
+  @keyframes glitch {
+    0%   { text-shadow: 2px 0 var(--mauve), -2px 0 #00ffff; }
+    25%  { text-shadow: -2px 0 var(--mauve), 2px 0 #00ffff; }
+    50%  { text-shadow: 2px 0 #00ffff, -2px 0 var(--mauve); }
+    75%  { text-shadow: -2px 0 #00ffff, 2px 0 var(--mauve); }
+    100% { text-shadow: 2px 0 var(--mauve), -2px 0 #00ffff; }
+  }
+
+  .glitch { animation: glitch 0.3s infinite; }
+
+  @keyframes pulse-gem {
+    0%, 100% { filter: drop-shadow(0 0 16px rgba(178,90,128,0.5)); }
+    50%       { filter: drop-shadow(0 0 32px rgba(178,90,128,0.9)); }
+  }
+
+  .gem { animation: pulse-gem 2.5s ease-in-out infinite; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in { animation: fadeIn 0.4s ease forwards; }
+</style>
+</head>
+<body>
+
+<canvas id="matrix-canvas"></canvas>
+<div class="flash" id="flash"></div>
+
+<!-- ══════════════ INTRO SCREEN ══════════════ -->
+<div class="screen active" id="screen-intro">
+  <div class="logo-wrap">
+    <svg class="gem" width="60" height="84" viewBox="0 0 200 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="100,0 30,70 20,200 100,280 100,160 60,110 80,40" fill="#522842"/>
+      <polygon points="100,0 170,70 180,200 100,280 100,160 140,110 120,40" fill="#8B4A6B"/>
+      <polygon points="100,0 80,40 60,110 100,160" fill="#6B3558"/>
+      <polygon points="100,0 120,40 140,110 100,160" fill="#9E5A7A"/>
+      <polygon points="100,160 60,110 20,200 100,280" fill="#3D1E30"/>
+      <polygon points="100,160 140,110 180,200 100,280" fill="#6B3558"/>
+      <line x1="100" y1="0" x2="100" y2="280" stroke="white" stroke-width="3"/>
+      <line x1="100" y1="0" x2="60" y2="110" stroke="white" stroke-width="2"/>
+      <line x1="100" y1="0" x2="140" y2="110" stroke="white" stroke-width="2"/>
+      <line x1="60" y1="110" x2="100" y2="160" stroke="white" stroke-width="1.5"/>
+      <line x1="140" y1="110" x2="100" y2="160" stroke="white" stroke-width="1.5"/>
+      <line x1="20" y1="200" x2="60" y2="110" stroke="white" stroke-width="1.5"/>
+      <line x1="180" y1="200" x2="140" y2="110" stroke="white" stroke-width="1.5"/>
+    </svg>
+  </div>
+
+  <div class="intro-title">
+    <span class="hack">HACK</span>
+    <span class="the">THE</span>
+    <span class="chain">CHAIN</span>
+  </div>
+
+  <div class="intro-sub">A Seismic Privacy Game</div>
+
+  <p class="intro-desc">
+    You are a hacker. Your mission: <strong>steal data</strong> from blockchain transactions.<br><br>
+    Public chains? Easy. Everything is exposed.<br>
+    But when you hit a <strong>Seismic-encrypted chain</strong>… good luck. 🔒
+  </p>
+
+  <button class="btn-primary" onclick="startTutorial()">START HACKING</button>
+  <button class="btn-secondary" onclick="skipTutorial()">Skip Tutorial</button>
+
+  <div class="powered">Powered by <span>Seismic</span> · seismic.systems</div>
+</div>
+
+<!-- ══════════════ TUTORIAL SCREEN ══════════════ -->
+<div class="screen" id="screen-tutorial">
+  <div class="tutorial-box fade-in">
+    <h2>🎮 How to Play</h2>
+
+    <div class="tut-step">
+      <div class="tut-num">1</div>
+      <div class="tut-text">You'll see a <strong>blockchain transaction</strong> — like a hacker intercepting live chain data.</div>
+    </div>
+    <div class="tut-step">
+      <div class="tut-num">2</div>
+      <div class="tut-text">Answer questions about the transaction. On <span class="bad">public chains</span>, data is visible and easy to steal.</div>
+    </div>
+    <div class="tut-step">
+      <div class="tut-num">3</div>
+      <div class="tut-text">On <span class="good">Seismic chains</span>, data is <strong>encrypted</strong> — you'll get blocked every time you try to steal it.</div>
+    </div>
+    <div class="tut-step">
+      <div class="tut-num">4</div>
+      <div class="tut-text">You have <strong>3 lives ❤️</strong> and <strong>15 seconds</strong> per question. Score points and learn why privacy matters!</div>
+    </div>
+
+    <br/>
+    <button class="btn-primary" onclick="startGame()" style="width:100%">LET'S HACK 💻</button>
+  </div>
+</div>
+
+<!-- ══════════════ GAME SCREEN ══════════════ -->
+<div class="screen" id="screen-game">
+  <div class="hud">
+    <div class="hud-logo">
+      <svg width="16" height="22" viewBox="0 0 200 280" fill="none">
+        <polygon points="100,0 30,70 20,200 100,280 100,160 60,110 80,40" fill="#522842"/>
+        <polygon points="100,0 170,70 180,200 100,280 100,160 140,110 120,40" fill="#8B4A6B"/>
+        <line x1="100" y1="0" x2="100" y2="280" stroke="white" stroke-width="6"/>
+      </svg>
+      Hack the Chain
+    </div>
+    <div class="hud-center">
+      <div class="hud-stat">
+        <div class="hud-stat-val" id="hud-score">0</div>
+        <div class="hud-stat-label">Score</div>
+      </div>
+      <div class="hud-stat">
+        <div class="hud-stat-val" id="hud-round">1/8</div>
+        <div class="hud-stat-label">Round</div>
+      </div>
+      <div class="hud-stat">
+        <div class="hud-stat-val" id="hud-streak">0🔥</div>
+        <div class="hud-stat-label">Streak</div>
+      </div>
+    </div>
+    <div class="hud-right" id="hud-lives">
+      <span class="life" id="life1">❤️</span>
+      <span class="life" id="life2">❤️</span>
+      <span class="life" id="life3">❤️</span>
+    </div>
+  </div>
+
+  <div class="round-banner">
+    <span class="round-label" id="round-label">Round 1 · Public Chain</span>
+    <span class="chain-type public" id="chain-badge">PUBLIC CHAIN</span>
+  </div>
+
+  <div class="game-area">
+    <div class="progress-dots" id="progress-dots"></div>
+
+    <div class="timer-wrap">
+      <div class="timer-label">
+        <span>Time remaining</span>
+        <span id="timer-count">15s</span>
+      </div>
+      <div class="timer-bar"><div class="timer-fill" id="timer-fill"></div></div>
+    </div>
+
+    <div class="scenario-card fade-in">
+      <div class="scenario-title" id="scenario-label">Intercepting transaction...</div>
+      <div class="scenario-desc" id="scenario-desc"></div>
+      <div class="scenario-sub" id="scenario-sub"></div>
+    </div>
+
+    <div class="tx-block fade-in" id="tx-block"></div>
+
+    <div class="action-box">
+      <div class="action-question" id="action-question"></div>
+      <div class="action-sub" id="action-sub"></div>
+      <div class="choices" id="choices"></div>
+    </div>
+
+    <div class="feedback" id="feedback">
+      <div class="fb-icon" id="fb-icon"></div>
+      <div class="fb-text" id="fb-text"></div>
+    </div>
+
+    <button class="next-btn" id="next-btn" onclick="nextRound()">NEXT ROUND →</button>
+  </div>
+</div>
+
+<!-- ══════════════ RESULT SCREEN ══════════════ -->
+<div class="screen" id="screen-result">
+  <div class="result-box fade-in">
+    <span class="result-emoji" id="result-emoji">🏆</span>
+    <div class="result-title" id="result-title">Game Over</div>
+    <div class="result-sub" id="result-sub"></div>
+
+    <div class="result-stats">
+      <div class="result-stat">
+        <span class="result-stat-val" id="res-score">0</span>
+        <div class="result-stat-label">Final Score</div>
+      </div>
+      <div class="result-stat">
+        <span class="result-stat-val" id="res-correct">0</span>
+        <div class="result-stat-label">Correct</div>
+      </div>
+      <div class="result-stat">
+        <span class="result-stat-val" id="res-best">0</span>
+        <div class="result-stat-label">Best Streak</div>
+      </div>
+    </div>
+
+    <div class="seismic-msg">
+      <div class="seismic-msg-label">💡 Why Seismic Matters</div>
+      <div class="seismic-msg-text" id="seismic-msg-text"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" onclick="restartGame()">PLAY AGAIN</button>
+      <button class="btn-secondary" onclick="visitSeismic()">Visit seismic.systems →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// MATRIX RAIN
+// ══════════════════════════════════════════════
+const canvas = document.getElementById('matrix-canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+const cols = Math.floor(canvas.width / 16);
+const drops = Array(cols).fill(1);
+function drawMatrix() {
+  ctx.fillStyle = 'rgba(0,0,0,0.05)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#B25A80';
+  ctx.font = '14px DM Mono, monospace';
+  drops.forEach((y, i) => {
+    const char = Math.random() > 0.5 ? '1' : '0';
+    ctx.fillText(char, i * 16, y * 16);
+    if (y * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  });
+}
+setInterval(drawMatrix, 60);
+
+// ══════════════════════════════════════════════
+// GAME DATA
+// ══════════════════════════════════════════════
+const rounds = [
+  {
+    chain: 'public',
+    label: 'Round 1 · Public Chain',
+    scenario: 'Intercepting a salary payment...',
+    desc: 'A company just paid their employee on a public blockchain.',
+    sub: 'You intercepted the transaction. Look at what you can see:',
+    tx: [
+      { key: 'FROM',   val: '0xA3f...91Bc', type: 'visible' },
+      { key: 'TO',     val: '0x77d...C4aE', type: 'visible' },
+      { key: 'AMOUNT', val: '4,500 USDC',   type: 'amount-visible' },
+      { key: 'NOTE',   val: 'SALARY-NOV',   type: 'visible' },
+      { key: 'TIME',   val: '2025-11-01 09:00 UTC', type: 'visible' }
+    ],
+    question: 'As a hacker, what can you determine from this transaction?',
+    sub2: 'Choose the most accurate answer',
+    choices: [
+      { text: "The employee's exact salary is $4,500/month", correct: true },
+      { text: 'Nothing — the data is encrypted', correct: false },
+      { text: 'Only the sender address', correct: false },
+      { text: 'The transaction is invalid', correct: false }
+    ],
+    feedback_correct: '✅ Exactly. On a public chain, you can see the <strong>sender, receiver, exact amount, and even the payment label</strong>. This employee\'s salary is exposed to the entire world.',
+    feedback_wrong: '❌ Wrong. On a public blockchain, <strong>every detail is fully visible</strong> — amount, addresses, timing, even notes. Nothing is hidden.'
+  },
+  {
+    chain: 'seismic',
+    label: 'Round 2 · Seismic Chain',
+    scenario: 'Intercepting a Seismic salary payment...',
+    desc: 'Same company. Same employee. But this time on Seismic.',
+    sub: 'You intercepted the transaction. Now look:',
+    tx: [
+      { key: 'FROM',   val: '0x00...0000', type: 'encrypted' },
+      { key: 'TO',     val: '0x00...0000', type: 'encrypted' },
+      { key: 'AMOUNT', val: '0x00...0000', type: 'encrypted' },
+      { key: 'NOTE',   val: '0x00...0000', type: 'encrypted' },
+      { key: 'STATUS', val: 'VERIFIED ✓',  type: 'visible' }
+    ],
+    question: 'You intercepted this Seismic transaction. What can you steal?',
+    sub2: 'Be honest — what do you actually see?',
+    choices: [
+      { text: 'Nothing — everything is encrypted', correct: true },
+      { text: 'The salary amount at least', correct: false },
+      { text: 'The sender wallet address', correct: false },
+      { text: 'The payment timestamp', correct: false }
+    ],
+    feedback_correct: '✅ Correct! On Seismic, <strong>all data is encrypted at protocol level</strong>. You see nothing useful. The chain still verified the payment — but you as a hacker are completely blocked.',
+    feedback_wrong: '❌ Wrong. On Seismic, <strong>you can steal absolutely nothing</strong>. Sender, receiver, amount — all encrypted. You\'re completely locked out.'
+  },
+  {
+    chain: 'public',
+    label: 'Round 3 · Public DeFi',
+    scenario: 'Scanning a DeFi lending position...',
+    desc: 'A user has an open loan on a public DeFi protocol.',
+    sub: 'You can see their entire position on-chain:',
+    tx: [
+      { key: 'COLLATERAL', val: '10 ETH ($32,000)', type: 'amount-visible' },
+      { key: 'BORROWED',   val: '18,000 USDC',      type: 'amount-visible' },
+      { key: 'LIQ. PRICE', val: '$2,800/ETH',       type: 'amount-visible' },
+      { key: 'HEALTH',     val: '1.23 (at risk)',    type: 'visible' },
+      { key: 'WALLET',     val: '0xB9c...44Fd',      type: 'visible' }
+    ],
+    question: 'What can a malicious actor do with this public data?',
+    sub2: 'Think like a hacker',
+    choices: [
+      { text: 'Nothing — DeFi is safe by design', correct: false },
+      { text: 'Push ETH price to $2,800 to trigger liquidation and profit', correct: true },
+      { text: 'Only read the data but not use it', correct: false },
+      { text: 'Report it to the protocol', correct: false }
+    ],
+    feedback_correct: '✅ Exactly right. This is called a <strong>liquidation attack</strong>. Bots watch public positions and deliberately manipulate prices to trigger liquidations for profit. It\'s a massive DeFi problem.',
+    feedback_wrong: '❌ Wrong. Attackers can see the <strong>exact liquidation price</strong> and push the market to trigger it. This is a real attack called liquidation hunting — and it costs DeFi users billions.'
+  },
+  {
+    chain: 'seismic',
+    label: 'Round 4 · Seismic DeFi',
+    scenario: 'Scanning a Seismic DeFi position...',
+    desc: 'Same user. Same loan. But on Seismic this time.',
+    sub: 'You try to read their lending position:',
+    tx: [
+      { key: 'COLLATERAL', val: '0x00...0000', type: 'encrypted' },
+      { key: 'BORROWED',   val: '0x00...0000', type: 'encrypted' },
+      { key: 'LIQ. PRICE', val: '0x00...0000', type: 'encrypted' },
+      { key: 'HEALTH',     val: '0x00...0000', type: 'encrypted' },
+      { key: 'PROTOCOL',   val: 'RULES ENFORCED ✓', type: 'visible' }
+    ],
+    question: 'Can you launch a liquidation attack on this Seismic position?',
+    sub2: 'You need the liquidation price to attack',
+    choices: [
+      { text: 'No — you cannot see the liquidation price', correct: true },
+      { text: 'Yes — liquidation prices are always public', correct: false },
+      { text: 'Maybe — if you guess the price', correct: false },
+      { text: 'Yes — all DeFi data must be public', correct: false }
+    ],
+    feedback_correct: '✅ Correct! Without knowing the liquidation price, <strong>you cannot target this position</strong>. Seismic protects DeFi users from liquidation hunting while still enforcing all protocol rules.',
+    feedback_wrong: '❌ Wrong. On Seismic, <strong>you have no idea where the liquidation price is</strong>. You can\'t attack what you can\'t see. The protocol still works — you just can\'t exploit it.'
+  },
+  {
+    chain: 'public',
+    label: 'Round 5 · MEV Attack',
+    scenario: 'Spotting a trade in the mempool...',
+    desc: 'A trader is about to swap $50,000 for ETH on a public DEX.',
+    sub: 'The transaction is waiting in the mempool — visible to everyone:',
+    tx: [
+      { key: 'ACTION',  val: 'SWAP USDC → ETH',    type: 'amount-visible' },
+      { key: 'AMOUNT',  val: '$50,000 USDC',        type: 'amount-visible' },
+      { key: 'SLIPPAGE',val: '0.5%',                type: 'visible' },
+      { key: 'DEX',     val: 'Uniswap V3',          type: 'visible' },
+      { key: 'STATUS',  val: 'PENDING (mempool)',    type: 'visible' }
+    ],
+    question: 'As an MEV bot, what do you do with this information?',
+    sub2: 'This is front-running — a real $1B+/year problem',
+    choices: [
+      { text: 'Ignore it — mempool data isn\'t useful', correct: false },
+      { text: 'Front-run: buy ETH first, sell after their trade pushes price up', correct: true },
+      { text: 'Report the transaction as suspicious', correct: false },
+      { text: 'Wait for the trade to complete', correct: false }
+    ],
+    feedback_correct: '✅ Exactly. This is <strong>MEV front-running</strong>. Bots see your pending trade, buy ETH before you, and sell after your large trade pushes the price up — stealing value directly from your trade.',
+    feedback_wrong: '❌ Wrong. MEV bots <strong>front-run</strong> large trades by buying before you and selling after. It\'s automated theft that costs traders billions per year on public chains.'
+  },
+  {
+    chain: 'seismic',
+    label: 'Round 6 · Seismic DEX',
+    scenario: 'Scanning the Seismic mempool...',
+    desc: 'The same $50,000 trade — but routed through a Seismic-powered DEX.',
+    sub: 'You try to read the pending transaction:',
+    tx: [
+      { key: 'ACTION',  val: '0x00...0000', type: 'encrypted' },
+      { key: 'AMOUNT',  val: '0x00...0000', type: 'encrypted' },
+      { key: 'SLIPPAGE',val: '0x00...0000', type: 'encrypted' },
+      { key: 'DEX',     val: '0x00...0000', type: 'encrypted' },
+      { key: 'STATUS',  val: 'EXECUTING ✓', type: 'visible' }
+    ],
+    question: 'Can your MEV bot front-run this Seismic trade?',
+    sub2: 'You need to know what is being traded to front-run it',
+    choices: [
+      { text: 'No — you cannot see what is being traded', correct: true },
+      { text: 'Yes — MEV always works on any chain', correct: false },
+      { text: 'Partially — you can see the DEX at least', correct: false },
+      { text: 'Yes — large trades are always detectable', correct: false }
+    ],
+    feedback_correct: '✅ You cannot front-run what you cannot see! <strong>Seismic encrypts the entire trade</strong> — amount, token, slippage. MEV bots are completely blind. Traders keep 100% of their value.',
+    feedback_wrong: '❌ Wrong. On Seismic, <strong>MEV bots see nothing</strong>. The trade type, size, and tokens are all encrypted. Front-running is impossible when there\'s nothing to read.'
+  },
+  {
+    chain: 'public',
+    label: 'Round 7 · Business Payments',
+    scenario: 'Intercepting corporate payments...',
+    desc: 'A business sends crypto payments to 3 suppliers on-chain.',
+    sub: 'All transactions are fully public:',
+    tx: [
+      { key: 'SUPPLIER A', val: '$120,000 USDC — monthly', type: 'amount-visible' },
+      { key: 'SUPPLIER B', val: '$45,000 USDC — monthly',  type: 'amount-visible' },
+      { key: 'SUPPLIER C', val: '$8,500 USDC — monthly',   type: 'amount-visible' },
+      { key: 'FREQUENCY',  val: 'Every 1st of month',      type: 'visible' },
+      { key: 'TOTAL',      val: '$173,500/month',           type: 'amount-visible' }
+    ],
+    question: 'What can a competitor learn from watching this business\'s on-chain payments?',
+    sub2: 'Think about what business intelligence this reveals',
+    choices: [
+      { text: 'Nothing useful — just transaction hashes', correct: false },
+      { text: 'Their supplier list, costs, and total monthly spend', correct: true },
+      { text: 'Only the total amount, not individual suppliers', correct: false },
+      { text: 'The data is encrypted by the bank', correct: false }
+    ],
+    feedback_correct: '✅ Perfect. A competitor can see <strong>exactly who you pay, how much, and when</strong>. They can poach your suppliers, undercut your pricing, or map your entire supply chain — all from public chain data.',
+    feedback_wrong: '❌ Wrong. Every payment is fully visible. Competitors can reverse-engineer your <strong>entire supply chain, cost structure, and supplier relationships</strong> just by watching your wallet.'
+  },
+  {
+    chain: 'seismic',
+    label: 'Round 8 · Final Boss 🔒',
+    scenario: 'FINAL ROUND — Cracking Seismic...',
+    desc: 'Same business. Same payments. But fully on Seismic.',
+    sub: 'This is your last chance. Can you crack Seismic\'s encryption?',
+    tx: [
+      { key: 'SUPPLIER A', val: '0x00...0000', type: 'encrypted' },
+      { key: 'SUPPLIER B', val: '0x00...0000', type: 'encrypted' },
+      { key: 'SUPPLIER C', val: '0x00...0000', type: 'encrypted' },
+      { key: 'FREQUENCY',  val: '0x00...0000', type: 'encrypted' },
+      { key: 'SEISMIC',    val: 'ENCRYPT ALL CHAINS ✓', type: 'visible' }
+    ],
+    question: 'Final question: Why can\'t you hack a Seismic-encrypted transaction?',
+    sub2: 'This is the core of what Seismic built',
+    choices: [
+      { text: 'The data is hidden off-chain in a database', correct: false },
+      { text: 'Data is encrypted at hardware level (TEE) during execution — no one can read it', correct: true },
+      { text: 'Seismic uses a VPN to hide transactions', correct: false },
+      { text: 'The blockchain validator hides the data', correct: false }
+    ],
+    feedback_correct: '✅ That\'s it! <strong>TEE — Trusted Execution Environment</strong>. Data is encrypted at the hardware level during computation itself. Even node operators can\'t read it. This is Seismic\'s breakthrough.',
+    feedback_wrong: '❌ Wrong. Seismic uses <strong>TEE (Trusted Execution Environment)</strong> — hardware-level encryption during computation. The data never exists unencrypted. Nobody can read it — not even Seismic.'
+  }
+];
+
+// ══════════════════════════════════════════════
+// GAME STATE
+// ══════════════════════════════════════════════
+let state = {
+  current: 0,
+  score: 0,
+  lives: 3,
+  streak: 0,
+  bestStreak: 0,
+  correct: 0,
+  answered: false,
+  timerInterval: null,
+  timeLeft: 15,
+  results: []
+};
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startTutorial() { showScreen('screen-tutorial'); }
+function skipTutorial()  { startGame(); }
+
+function startGame() {
+  state = { current:0, score:0, lives:3, streak:0, bestStreak:0, correct:0, answered:false, timerInterval:null, timeLeft:15, results:[] };
+  showScreen('screen-game');
+  buildProgressDots();
+  loadRound();
+}
+
+// ══════════════════════════════════════════════
+// PROGRESS DOTS
+// ══════════════════════════════════════════════
+function buildProgressDots() {
+  const wrap = document.getElementById('progress-dots');
+  wrap.innerHTML = '';
+  rounds.forEach((r, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' current' : '');
+    d.id = `dot-${i}`;
+    wrap.appendChild(d);
+  });
+}
+
+function updateDot(idx, result) {
+  const d = document.getElementById(`dot-${idx}`);
+  if (!d) return;
+  d.classList.remove('current');
+  d.classList.add(result ? 'done' : 'wrong-d');
+  const next = document.getElementById(`dot-${idx+1}`);
+  if (next) next.classList.add('current');
+}
+
+// ══════════════════════════════════════════════
+// LOAD ROUND
+// ══════════════════════════════════════════════
+function loadRound() {
+  const r = rounds[state.current];
+  state.answered = false;
+
+  // HUD
+  document.getElementById('hud-score').textContent = state.score;
+  document.getElementById('hud-round').textContent = `${state.current+1}/${rounds.length}`;
+  document.getElementById('hud-streak').textContent = `${state.streak}🔥`;
+
+  // Round banner
+  document.getElementById('round-label').textContent = r.label;
+  const badge = document.getElementById('chain-badge');
+  if (r.chain === 'seismic') {
+    badge.textContent = 'SEISMIC CHAIN';
+    badge.className = 'chain-type seismic';
+  } else {
+    badge.textContent = 'PUBLIC CHAIN';
+    badge.className = 'chain-type public';
+  }
+
+  // Scenario
+  document.getElementById('scenario-label').textContent = r.scenario;
+  document.getElementById('scenario-desc').textContent = r.desc;
+  document.getElementById('scenario-sub').textContent = r.sub;
+
+  // TX block
+  const txBlock = document.getElementById('tx-block');
+  txBlock.innerHTML = `
+    <div class="tx-header">
+      <span>⛓ INTERCEPTED TRANSACTION</span>
+      <span>${r.chain === 'seismic' ? '🔒 SEISMIC NETWORK' : '🔓 PUBLIC NETWORK'}</span>
+    </div>
+    ${r.tx.map(row => `
+      <div class="tx-row">
+        <span class="tx-key">${row.key}</span>
+        <span class="tx-val ${row.type}">${row.type === 'encrypted' ? '████████████' : row.val}</span>
+      </div>
+    `).join('')}
+  `;
+
+  // Question
+  document.getElementById('action-question').textContent = r.question;
+  document.getElementById('action-sub').textContent = r.sub2;
+
+  // Choices
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+  // Shuffle choices
+  const shuffled = [...r.choices].sort(() => Math.random() - 0.5);
+  shuffled.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = c.text;
+    btn.onclick = () => answer(c.correct, btn, shuffled);
+    choicesEl.appendChild(btn);
+  });
+
+  // Feedback & next
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback';
+  fb.style.display = 'none';
+  document.getElementById('next-btn').className = 'next-btn';
+
+  // Timer
+  startTimer();
+}
+
+// ══════════════════════════════════════════════
+// TIMER
+// ══════════════════════════════════════════════
+function startTimer() {
+  clearInterval(state.timerInterval);
+  state.timeLeft = 15;
+  updateTimerUI();
+  state.timerInterval = setInterval(() => {
+    state.timeLeft--;
+    updateTimerUI();
+    if (state.timeLeft <= 0) {
+      clearInterval(state.timerInterval);
+      if (!state.answered) timeOut();
+    }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  const pct = (state.timeLeft / 15) * 100;
+  const fill = document.getElementById('timer-fill');
+  const count = document.getElementById('timer-count');
+  fill.style.width = pct + '%';
+  count.textContent = state.timeLeft + 's';
+  fill.className = 'timer-fill' + (state.timeLeft <= 5 ? ' urgent' : '');
+}
+
+function timeOut() {
+  if (state.answered) return;
+  state.answered = true;
+  loseLife();
+  state.streak = 0;
+  document.getElementById('hud-streak').textContent = `0🔥`;
+
+  const r = rounds[state.current];
+  showFeedback(false, "⏰ Time's up! " + r.feedback_wrong.replace('❌ Wrong. ', ''));
+  markChoices(null);
+  updateDot(state.current, false);
+  document.getElementById('next-btn').className = 'next-btn show';
+}
+
+// ══════════════════════════════════════════════
+// ANSWER
+// ══════════════════════════════════════════════
+function answer(correct, clickedBtn, choices) {
+  if (state.answered) return;
+  state.answered = true;
+  clearInterval(state.timerInterval);
+
+  const r = rounds[state.current];
+
+  if (correct) {
+    const timeBonus = Math.floor(state.timeLeft * 10);
+    const streakBonus = state.streak >= 2 ? state.streak * 50 : 0;
+    const pts = 100 + timeBonus + streakBonus;
+    state.score += pts;
+    state.streak++;
+    state.correct++;
+    if (state.streak > state.bestStreak) state.bestStreak = state.streak;
+
+    clickedBtn.classList.add('correct');
+    flashScreen('green-flash');
+    showFeedback(true, r.feedback_correct);
+    updateDot(state.current, true);
+    state.results.push(true);
+  } else {
+    state.streak = 0;
+    loseLife();
+    clickedBtn.classList.add('wrong');
+    flashScreen('red-flash');
+
+    // Show correct answer
+    document.querySelectorAll('.choice-btn').forEach(btn => {
+      const isCorrectChoice = choices.find(c => c.text === btn.textContent && c.correct);
+      if (isCorrectChoice) btn.classList.add('correct');
+      else if (btn !== clickedBtn) btn.classList.add('reveal');
+    });
+
+    showFeedback(false, r.feedback_wrong);
+    updateDot(state.current, false);
+    state.results.push(false);
+  }
+
+  document.getElementById('hud-score').textContent = state.score;
+  document.getElementById('hud-streak').textContent = `${state.streak}🔥`;
+  document.getElementById('next-btn').className = 'next-btn show';
+}
+
+function markChoices(correctText) {
+  document.querySelectorAll('.choice-btn').forEach(btn => {
+    btn.classList.add('reveal');
+  });
+}
+
+function loseLife() {
+  state.lives--;
+  const lifeEl = document.getElementById(`life${state.lives + 1}`);
+  if (lifeEl) lifeEl.classList.add('lost');
+}
+
+function showFeedback(correct, text) {
+  const fb = document.getElementById('feedback');
+  fb.style.display = 'flex';
+  fb.className = `feedback show ${correct ? 'correct-fb' : 'wrong-fb'}`;
+  document.getElementById('fb-icon').textContent = correct ? '✅' : '❌';
+  document.getElementById('fb-text').innerHTML = text.replace(/^[✅❌]\s/, '');
+}
+
+function flashScreen(cls) {
+  const f = document.getElementById('flash');
+  f.className = `flash ${cls} show`;
+  setTimeout(() => f.className = 'flash', 300);
+}
+
+// ══════════════════════════════════════════════
+// NEXT ROUND
+// ══════════════════════════════════════════════
+function nextRound() {
+  if (state.lives <= 0) { showResult(); return; }
+  state.current++;
+  if (state.current >= rounds.length) { showResult(); return; }
+  loadRound();
+  window.scrollTo(0, 0);
+}
+
+// ══════════════════════════════════════════════
+// RESULT
+// ══════════════════════════════════════════════
+function showResult() {
+  clearInterval(state.timerInterval);
+  showScreen('screen-result');
+
+  const pct = Math.round((state.correct / rounds.length) * 100);
+
+  document.getElementById('res-score').textContent = state.score;
+  document.getElementById('res-correct').textContent = `${state.correct}/${rounds.length}`;
+  document.getElementById('res-best').textContent = state.bestStreak;
+
+  let emoji, title, sub, msg;
+
+  if (state.correct >= 7) {
+    emoji = '🏆'; title = 'Master Defender';
+    sub = 'You understand blockchain privacy better than most developers. Seismic was made for people like you.';
+    msg = `You correctly identified how <strong>public chains expose everything</strong> — salaries, DeFi positions, trade data. And you saw how <strong>Seismic's TEE encryption</strong> blocks all of it. This is why @SeismicSys is building the privacy layer that DeFi desperately needs.`;
+  } else if (state.correct >= 5) {
+    emoji = '🔐'; title = 'Privacy Aware';
+    sub = 'You get it. Public chains are dangerous, and Seismic is the solution.';
+    msg = `You understand that <strong>public blockchains expose sensitive data</strong> to hackers, bots, and competitors. Seismic encrypts this data at the <strong>hardware level using TEE</strong> — so your transactions stay private while the blockchain stays trustless.`;
+  } else if (state.correct >= 3) {
+    emoji = '📚'; title = 'Still Learning';
+    sub = 'Privacy matters more than you realised. Play again to sharpen your knowledge!';
+    msg = `Every failed round showed you a <strong>real attack that happens on public blockchains today</strong> — front-running, liquidation hunting, salary exposure. <strong>Seismic encrypts all of this</strong> using TEE. Visit seismic.systems to learn more.`;
+  } else {
+    emoji = '😅'; title = 'The Blockchain Got You';
+    sub = 'That\'s okay — now you know why privacy on-chain is so critical!';
+    msg = `Public blockchains expose <strong>everything</strong>. Seismic was built to fix this — using <strong>TEE (Trusted Execution Environments)</strong> to encrypt your data at hardware level. Nobody — not even node operators — can read it. That\'s the Seismic difference.`;
+  }
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-sub').textContent = sub;
+  document.getElementById('seismic-msg-text').innerHTML = msg;
+}
+
+function restartGame() { startGame(); }
+function visitSeismic() { window.open('https://seismic.systems', '_blank'); }
+</script>
+</body>
+</html>
